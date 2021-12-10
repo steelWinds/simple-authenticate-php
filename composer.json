@@ -1,0 +1,21 @@
+{
+    "name": "ninjainside/authentication-user-php",
+    "description": "simple authentication app",
+    "type": "project",
+    "require": {
+        "squizlabs/php_codesniffer": "3.6.1"
+    },
+    "license": "Not LICENSE",
+    "autoload": {
+        "psr-4": {
+            "API\\": "api/"
+        }
+    },
+    "authors": [
+        {
+            "name": "steelWinds",
+            "email": "kirillsurov0@mail.ru"
+        }
+    ],
+    "minimum-stability": "dev"
+}
