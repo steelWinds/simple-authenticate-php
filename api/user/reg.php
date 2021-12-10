@@ -21,22 +21,26 @@ function reg()
 
     try {
         $post_data = json_decode(file_get_contents('php://input'), true);
+
+        if (empty($post_data)) {
+            throw new Exception('Empty post data');
+        }
+
+        $invalid_errors = array_filter(
+            $post_data,
+            function ($value) {
+                return empty(trim($value));
+            }
+        );
     } catch (Exception $error) {
         http_response_code(400);
 
         die(json_encode([
             'error' => [
-                'error_msg' => 'Empty post data'
+                'error_msg' => $error->getMessage()
             ]
         ]));
     }
-
-    $invalid_errors = array_filter(
-        $post_data,
-        function ($value) {
-            return empty(trim($value));
-        }
-    );
 
     if (count($invalid_errors) !== 0) {
         http_response_code(406);

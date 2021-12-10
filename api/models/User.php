@@ -7,6 +7,7 @@ require_once("{$_SERVER['DOCUMENT_ROOT']}/vendor/autoload.php");
 use API\services\Database;
 use PDOException;
 use PDO;
+use Exception;
 
 class User
 {
@@ -14,6 +15,7 @@ class User
 
     private string $table_name = 'users';
     private string $dbname = 'test_rest_api';
+    private array $errors = [];
 
     public int $id;
     public string $fullname;

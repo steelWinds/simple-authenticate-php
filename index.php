@@ -13,8 +13,10 @@ if (file_exists($uri)) {
     die();
 }
 
-echo '
+http_response_code(404);
+
+die('
     <div style="width: 700px;">
         <h1 style="margin: 0 auto; display: block; width: 200px;">404 error</h1>
     </div>
-';
+');

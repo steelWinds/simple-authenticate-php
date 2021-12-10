@@ -7,6 +7,7 @@ require_once("{$_SERVER['DOCUMENT_ROOT']}/vendor/autoload.php");
 use API\models\User;
 use API\services\Database;
 use PDOException;
+use Exception;
 
 header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: *');
@@ -18,14 +19,28 @@ function auth()
 {
     // Post data invalids
 
-    $post_data = json_decode(file_get_contents('php://input'), true);
+    try {
+        $post_data = json_decode(file_get_contents('php://input'), true);
 
-    $invalid_errors = array_filter(
-        $post_data,
-        function ($value) {
-            return empty(trim($value));
+        if (empty($post_data)) {
+            throw new Exception('Empty post data');
         }
-    );
+
+        $invalid_errors = array_filter(
+            $post_data,
+            function ($value) {
+                return empty(trim($value));
+            }
+        );
+    } catch (Exception $error) {
+        http_response_code(400);
+
+        die(json_encode([
+            'error' => [
+                'error_msg' => $error->getMessage()
+            ]
+        ]));
+    }
 
     if (count($invalid_errors) !== 0) {
         http_response_code(406);
