@@ -25,38 +25,14 @@ function reg()
         if (empty($post_data)) {
             throw new Exception('Empty post data');
         }
-
-        $invalid_errors = array_filter(
-            $post_data,
-            function ($value) {
-                return empty(trim($value));
-            }
-        );
     } catch (Exception $error) {
-        http_response_code(400);
+        http_response_code(406);
 
         die(json_encode([
             'error' => [
                 'error_msg' => $error->getMessage()
             ]
         ]));
-    }
-
-    if (count($invalid_errors) !== 0) {
-        http_response_code(406);
-
-        $errors = array_map(function ($key) {
-            return "{$key} is invalid";
-        }, array_keys($invalid_errors));
-
-        die(json_encode(
-            [
-                'error' => [
-                    'message' => 'Invalid data',
-                    'errors' => $errors
-                ]
-            ]
-        ));
     }
 
     // Insert user in database

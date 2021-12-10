@@ -16,6 +16,7 @@ class User
     private string $table_name = 'users';
     private string $dbname = 'test_rest_api';
     private array $errors = [];
+    private array $user_data = [];
 
     public int $id;
     public string $fullname;
@@ -37,9 +38,36 @@ class User
         );
     }
 
+    public function validate(array $data)
+    {
+        $empty_values = array_filter(
+            $data,
+            function ($value) {
+                return empty(trim($value));
+            }
+        );
+
+        if (count($empty_values) !== 0) {
+            $this->errors = array_map(function ($key) {
+                return "{$key} is empty!";
+            }, array_keys($empty_values));
+        }
+
+        if (!(filter_var($data['login'], FILTER_VALIDATE_EMAIL))) {
+            array_push($this->errors, 'Email is not valid');
+        }
+
+        if (strlen($data['password']) < 10) {
+            array_push($this->errors, 'Password is very short');
+        }
+
+        if (count($this->errors) !== 0) {
+            throw new Exception('Error');
+        }
+    }
+
     public function create(array $user_data_array): string
     {
-
         $user_data_array = array_map(
             function ($value) {
                 return htmlspecialchars(strip_tags(trim($value)));
@@ -58,30 +86,32 @@ class User
             throw $error;
         }
 
-        $token = bin2hex(random_bytes(16));
-        $hash_password = password_hash($user_data_array['password'], PASSWORD_DEFAULT);
-
-        if (!(filter_var($user_data_array['login'], FILTER_VALIDATE_EMAIL))) {
-            http_response_code(401);
+        try {
+            $this->validate($user_data_array);
+        } catch (Exception $error) {
+            http_response_code(406);
 
             die(json_encode([
                 'error' => [
-                    'error_code' => null,
-                    'errors' => ['email is not valid']
+                    'error_type' => 'invalid data',
+                    'errors' => $this->errors
                 ]
             ]));
         }
+
+        $token = bin2hex(random_bytes(16));
+        $hash_password = password_hash($user_data_array['password'], PASSWORD_DEFAULT);
 
         $stmt->bindParam(':fullname', $user_data_array['fullname']);
         $stmt->bindParam(':login', $user_data_array['login']);
         $stmt->bindParam(':password', $hash_password);
         $stmt->bindParam(':token', $token);
 
-        if ($stmt->execute()) {
-            return $token;
+        if (!$stmt->execute()) {
+            throw new PDOException('Execute error');
         }
 
-        throw new PDOException('Execute error');
+        return $token;
     }
 
     public function auth(array $user_data_array): string
@@ -92,17 +122,6 @@ class User
             },
             $user_data_array
         );
-
-        if (!(filter_var($user_data_array['login'], FILTER_VALIDATE_EMAIL))) {
-            http_response_code(401);
-
-            die(json_encode([
-                'error' => [
-                    'error_code' => null,
-                    'errors' => ['email is not valid']
-                ]
-            ]));
-        }
 
         $query = "
             SELECT password, token FROM {$this->table_name}
@@ -115,33 +134,33 @@ class User
             throw $error;
         }
 
-        if ($stmt->execute()) {
-            if ($stmt->rowCount() === 0) {
-                http_response_code(400);
-
-                die(json_encode([
-                    'error' => [
-                        'error_msg' => 'Not found this user'
-                    ]
-                ]));
-            }
-
-            $auth_data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!(password_verify($user_data_array['password'], $auth_data['password']))) {
-                http_response_code(400);
-
-                die(json_encode([
-                    'errors' => [
-                        'error_msg' => 'Invalid data',
-                        'errors' => 'password wrong'
-                    ]
-                ]));
-            }
-
-            return $auth_data['token'];
+        if (!$stmt->execute()) {
+            throw new PDOException('Execute error');
         }
 
-        throw new PDOException('Execute error');
+        if ($stmt->rowCount() === 0) {
+            http_response_code(400);
+
+            die(json_encode([
+                'error' => [
+                    'error_msg' => 'Not found this user'
+                ]
+            ]));
+        }
+
+        $auth_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!(password_verify($user_data_array['password'], $auth_data['password']))) {
+            http_response_code(400);
+
+            die(json_encode([
+                'errors' => [
+                    'error_msg' => 'Invalid data',
+                    'errors' => 'password wrong'
+                ]
+            ]));
+        }
+
+        return $auth_data['token'];
     }
 }
